@@ -16,12 +16,18 @@ func main() {
 	}
 	defer conn.Close()
 
-	go readServerResponse(conn) // Start a goroutine to continuously read from the server
-
 	reader := bufio.NewReader(os.Stdin)
 
+	// Read and send the username to the server during the initial connection
+	fmt.Print("Enter your username: ")
+	username, _ := reader.ReadString('\n')
+	username = strings.TrimSpace(username)
+	conn.Write([]byte(username))
+	fmt.Print("Connected to Nexus\n")
+	go readServerResponse(conn) // Start a goroutine to continuously read from the server
+
 	for {
-		fmt.Print("Enter your input: ")
+		fmt.Print(username + "> ")
 		userInput, _ := reader.ReadString('\n')
 
 		// Remove newline character from the input
@@ -50,6 +56,6 @@ func readServerResponse(conn net.Conn) {
 			return
 		}
 		serverResponse := string(buffer[:n])
-		fmt.Println("Server response:", serverResponse)
+		fmt.Println(serverResponse)
 	}
 }

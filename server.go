@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 )
+
+var activeUsers sync.Map
 
 func main() {
 	listener, err := net.Listen("tcp", "127.0.0.1:8080")
@@ -28,24 +31,43 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	welcomeMessage := "Welcome to the server!\nEnter 'exit' to close the connection.\nEnter your input: "
-	conn.Write([]byte(welcomeMessage))
+	// welcomeMessage := "Welcome to the server!"
+	// conn.Write([]byte(welcomeMessage))
 
 	buffer := make([]byte, 1024)
+
+	n, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Error reading:", err)
+		return
+	}
+
+	username := strings.TrimSpace(string(buffer[:n]))
+	fmt.Printf("User '%s' connected.\n", username)
+
+	activeUsers.Store(username, struct{}{})
 
 	for {
 		n, err := conn.Read(buffer)
 		if err != nil {
-			fmt.Println("Error reading:", err)
+			fmt.Printf("User '%s' disconnected.\n", username)
+			activeUsers.Delete(username)
 			return
 		}
 
 		clientInput := strings.TrimSpace(string(buffer[:n]))
-		fmt.Println("Received:", clientInput)
+		fmt.Printf("User '%s' sent: %s\n", username, clientInput)
 
-		if clientInput == "exit" {
-			fmt.Println("Closing connection as per client request.")
-			return
+		if clientInput == "list active_users" {
+			listActiveUsers(conn)
 		}
 	}
+}
+
+func listActiveUsers(conn net.Conn) {
+	conn.Write([]byte("Active Users:\n"))
+	activeUsers.Range(func(key, value interface{}) bool {
+		conn.Write([]byte(fmt.Sprintf("- %s\n", key)))
+		return true
+	})
 }
