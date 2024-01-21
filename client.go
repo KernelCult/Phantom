@@ -16,6 +16,8 @@ func main() {
 	}
 	defer conn.Close()
 
+	go readServerResponse(conn) // Start a goroutine to continuously read from the server
+
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
@@ -36,5 +38,18 @@ func main() {
 			fmt.Println("Exiting client as per user request.")
 			return
 		}
+	}
+}
+
+func readServerResponse(conn net.Conn) {
+	buffer := make([]byte, 1024)
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			fmt.Println("Error reading from server:", err)
+			return
+		}
+		serverResponse := string(buffer[:n])
+		fmt.Println("Server response:", serverResponse)
 	}
 }
